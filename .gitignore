@@ -1,0 +1,13 @@
+# Credentials
+*.key
+*.pem
+secrets.txt
+credentials.conf
+passwords.txt
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
