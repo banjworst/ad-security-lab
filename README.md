@@ -2,158 +2,147 @@
 
 ## Project Overview
 
-A hands-on cybersecurity lab demonstrating **Active Directory security hardening, attack simulation, and threat detection** on a home lab environment. This project combines offensive and defensive security practices to showcase real-world AD security challenges and mitigations.
+A hands-on cybersecurity lab demonstrating **Active Directory security hardening, attack simulation, and threat detection** built on a home lab environment. This project combines offensive and defensive security practices to showcase real-world AD security challenges and mitigations.
 
 **Key Skills Demonstrated:**
 - Active Directory administration and security hardening
 - Security policy enforcement (password policies, account lockout)
-- Audit logging and event monitoring
-- Attack simulation (Brute Force, Privilege Escalation, Kerberoasting)
+- Privilege access management and group-based access control
+- Attack simulation (Brute Force, Privilege Escalation, Kerberoasting, Golden Tickets)
 - Threat detection and incident response
-- Python scripting for security automation
+- Linux system administration
 
 ---
 
 ## Lab Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│          M4 MacBook Air - UTM Virtualization        │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  ┌──────────────────┐      ┌──────────────────┐   │
-│  │   Samba4 AD DC   │      │  Windows 10 ARM  │   │
-│  │  (192.168.64.4)  │◄────►│  (Optional)      │   │
-│  │                  │      │                  │   │
-│  │ • Domain: home   │      │ • Domain joined  │   │
-│  │   lab.local      │      │ • Domain user    │   │
-│  │ • DNS: Active    │      │ • Policy applied │   │
-│  │ • Audit logging  │      │                  │   │
-│  │ • 12+ char pwd   │      │                  │   │
-│  │ • Account lockout│      │                  │   │
-│  └──────────────────┘      └──────────────────┘   │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+M4 MacBook Air - UTM Virtualization
+├─ Samba4 AD DC (192.168.64.4)
+│  ├─ Domain: homelab.local
+│  ├─ DNS: Active
+│  ├─ Password policy: 12+ chars, 30-min lockout, 24 password history
+│  ├─ Security groups: Domain_Admins_Restricted, Service_Accounts, Privileged_Users
+│  └─ Test users: admin_user, service_account, regular_user
+│
+└─ Audit logging: Enabled for security monitoring
 ```
 
 ---
 
 ## Security Hardening Implemented
 
-### **1. Password Policy Enforcement**
-```bash
-sudo samba-tool domain passwordsettings set \
-  --min-pwd-length=12 \
-  --pwd-history-length=5 \
-  --account-lockout-threshold=5 \
-  --account-lockout-duration=30
-```
+### 1. Password Policy Enforcement
+
+Current policy settings:
+- Minimum 12-character passwords
+- Password history of 24 (prevents password reuse)
+- Account lockout after 5 failed attempts
+- 30-minute lockout duration
+- 42-day maximum password age
 
 **Mitigations:**
-- Minimum 12-character passwords (prevents weak credentials)
-- Password history of 5 (prevents password reuse)
-- Account lockout after 5 failed attempts (brute force protection)
-- 30-minute lockout duration (slows attackers)
+- Prevents weak credentials (12+ char minimum)
+- Reduces brute force attack effectiveness
+- Forces regular password changes
+- Automatic account protection on suspicious activity
 
-### **2. Privileged Access Management (PAM)**
-```bash
-# Create security groups with restricted access
-sudo samba-tool group add "Domain_Admins_Restricted"
-sudo samba-tool group add "Service_Accounts"
-sudo samba-tool group add "Privileged_Users"
-```
+### 2. Privileged Access Management (PAM)
+
+Security groups created:
+- **Domain_Admins_Restricted**: Administrative users with full domain access
+- **Service_Accounts**: Service account group for application services
+- **Privileged_Users**: Users with elevated but not full admin privileges
 
 **Principle of Least Privilege:**
-- Separate admin accounts from regular users
-- Service accounts isolated from user accounts
-- Privileged operations logged and monitored
+- Regular users: No special privileges
+- Service accounts: Limited to necessary permissions
+- Admin users: Only added to admin groups when required
+- All access changes logged
 
-### **3. Audit Logging & Monitoring**
-```bash
-sudo auditctl -w /var/lib/samba/private/sam.ldb -p wa -k samba_changes
-```
+### 3. Test Users Created
 
-**Event Monitoring:**
-- Event ID 4740: Account lockout (brute force detection)
-- Event ID 4672: Special privileges assigned (escalation detection)
-- Event ID 4769: Kerberos ticket requested (Kerberoasting detection)
+Domain users for testing:
+- **admin_user**: Member of Domain_Admins_Restricted and Privileged_Users
+- **service_account**: Member of Service_Accounts and Privileged_Users
+- **regular_user**: Standard user with no special privileges
 
 ---
 
 ## Attack Simulations & Mitigations
 
-### **Attack 1: Brute Force Attack**
+### Attack 1: Brute Force Attack
+
 **Scenario:** Attacker attempts repeated failed logins
 
-**Detection:**
-```
-Event ID 4740: Account locked out
-Threshold: 5 failed attempts within 15 minutes
-```
+**Mitigation:** Account lockout after 5 failed attempts, 30-minute lockout period
 
-**Mitigation:**
-- Account lockout policy (enforced)
-- Monitoring for repeated failed attempts
-- Admin notification on suspicious activity
+**Detection:** Event ID 4740 (Account locked out)
 
-### **Attack 2: Privilege Escalation**
+**Result:** Attack stopped within seconds, suspicious activity logged
+
+### Attack 2: Privilege Escalation
+
 **Scenario:** Non-privileged user attempts to execute admin commands
 
-**Detection:**
-```
-Event ID 4672: Special privileges assigned to new logon
-Event ID 4663: Unauthorized file/registry access attempts
-```
+**Mitigation:** Group-based access control, least privilege enforcement
 
-**Mitigation:**
-- Segregated admin groups
-- Command auditing for privileged operations
-- Regular privilege review
+**Detection:** Event ID 4672 (Privilege assignment), failed command attempts logged
 
-### **Attack 3: Kerberoasting (Credential Dumping)**
-**Scenario:** Attacker requests TGS tickets for service accounts to crack offline
+**Result:** Access denied, escalation attempt documented
 
-**Detection:**
-```
-Event ID 4769: Kerberos ticket requested (TGS-REQ)
-Monitor for: Unusual service account ticket requests
-```
+### Attack 3: Kerberoasting (Credential Dumping)
 
-**Mitigation:**
-- Strong passwords for service accounts (12+ chars, enforced)
-- Service Principal Name (SPN) scanning and hardening
-- Monitoring for suspicious ticket requests
-- Consider using managed service accounts
+**Scenario:** Attacker requests TGS tickets for service accounts
+
+**Mitigation:** Strong passwords (12+ chars) for service accounts
+
+**Detection:** Event ID 4769 (Kerberos ticket requested), unusual ticket patterns
+
+**Result:** Ticket requests monitored, strong passwords prevent successful cracking
+
+### Attack 4: Golden Ticket Attack
+
+**Scenario:** Attacker forges Kerberos Ticket Granting Tickets
+
+**Mitigation:** KRBTGT password rotation strategy, TGT monitoring
+
+**Detection:** Unusual TGT creation patterns, TGT validity period monitoring
+
+**Result:** Detection rules configured, mitigation documented
 
 ---
 
 ## Lab Results & Findings
 
-### **Baseline Metrics**
-| Metric | Value | Status |
-|--------|-------|--------|
-| Password Policy Enforcement | Enabled | Complete|
-| Account Lockout | 5 attempts / 30 min | Complete|
-| Audit Logging | Active | Complete |
-| Privileged Group Separation | 3 groups | Complete |
-| DNS Resolution | Functional | Complete |
+### Verified Security Controls
 
-### **Security Posture**
-- **Account Security**: Strong (12+ char min, history, lockout)
-- **Access Control**: Strong (role-based groups)
-- **Monitoring**: Enabled (audit logging active)
-- **Threat Detection**: Configured (event monitoring)
+| Control | Status | Impact |
+|---------|--------|--------|
+| Password Policy Enforcement | Enabled | Prevents weak credentials |
+| Account Lockout | 5 attempts / 30 min | Blocks brute force attacks |
+| Privilege Separation | 3 security groups | Enforces least privilege |
+| Password History | 24 previous passwords | Prevents password reuse |
+| Password Expiration | 42 days | Forces regular changes |
+| DNS Resolution | Functional | Domain operations enabled |
+
+### Security Posture
+
+- **Account Security**: Strong (12+ char minimum, history enforcement, lockout)
+- **Access Control**: Strong (role-based groups, least privilege)
+- **Monitoring**: Enabled (audit logging configured)
+- **Threat Detection**: Configured (detection rules for each attack vector)
 
 ---
 
 ## Tools & Technologies
 
-- **Virtualization**: UTM (ARM64)
-- **Domain Controller**: Samba4 (Linux-based AD alternative)
+- **Virtualization**: UTM (ARM64 support)
+- **Domain Controller**: Samba4 (Linux-based AD)
 - **Operating System**: Ubuntu Server 20.04+
-- **Scripting**: Python 3
+- **Scripting**: Bash
 - **Logging**: auditd
-- **Monitoring**: samba-tool commands
+- **Monitoring**: samba-tool, ausearch
 
 ---
 
@@ -161,95 +150,72 @@ Monitor for: Unusual service account ticket requests
 
 ```
 ad-security-lab/
-├── README.md                          # This file
-├── SETUP.md                          # Installation & setup guide
-├── ATTACK_SCENARIOS.md               # Detailed attack descriptions
-├── scripts/
-│   ├── ad_security_lab.py           # Attack simulation & detection
-│   ├── hardening.sh                 # Security hardening script
-│   ├── audit_logging.sh             # Audit log setup
-│   └── user_provisioning.py         # Automated user creation
-├── configs/
-│   ├── password_policy.conf         # Password policy settings
-│   ├── audit_rules.txt              # Audit logging rules
-│   └── group_policies.txt           # Group policy configurations
-├── documentation/
-│   ├── THREAT_MODEL.md              # Identified threats
-│   ├── DETECTION_GUIDE.md           # How to detect each attack
-│   └── MITIGATION_STRATEGIES.md     # Applied mitigations
-└── screenshots/
-    ├── samba_users_list.png
-    ├── audit_logs.png
-    ├── policy_enforcement.png
-    └── group_membership.png
+├── README.md                    # Project overview
+├── SETUP.md                     # Installation and configuration guide
+├── ATTACK_SCENARIOS.md          # Detailed threat model and mitigations
+├── LICENSE                      # MIT License
+├── .gitignore                   # Git ignore rules
+│
+└── scripts/
+    └── hardening.sh            # Security hardening commands
 ```
 
 ---
 
 ## Getting Started
 
-### **Prerequisites**
+### Prerequisites
 - M1/M2/M3/M4 Mac (or any Linux system)
 - UTM or similar virtualization platform
 - Ubuntu Server 20.04+ VM
 - 8GB RAM minimum, 100GB disk space
 
-### **Quick Start**
-```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/ad-security-lab.git
-cd ad-security-lab
+### Setup Instructions
 
-# 2. Review setup documentation
-cat SETUP.md
-
-# 3. Run hardening script
-chmod +x scripts/hardening.sh
-sudo ./scripts/hardening.sh
-
-# 4. Run security lab simulation
-python3 scripts/ad_security_lab.py
-```
-
-### **Detailed Setup**
-See [SETUP.md](SETUP.md) for step-by-step installation instructions.
+See **SETUP.md** for detailed step-by-step installation and configuration.
 
 ---
 
-## 📝 Key Learnings
+## Detailed Documentation
 
-1. **Active Directory Security** — Real-world hardening practices
-2. **Attack Simulation** — Understanding attacker methodologies
-3. **Threat Detection** — Identifying and responding to security events
-4. **Security Automation** — Scripting security tasks and monitoring
-5. **Documentation** — Professional security lab writeup
+- **SETUP.md**: Complete installation guide with all commands
+- **ATTACK_SCENARIOS.md**: In-depth threat modeling, detection methods, and mitigation strategies
 
 ---
 
-## 📄 License
+## Key Learnings
+
+1. **Active Directory Security** - Real-world hardening practices and enterprise controls
+2. **Attack Vectors** - Understanding common AD attack methodologies
+3. **Threat Detection** - Identifying and monitoring suspicious activity
+4. **Security Architecture** - Designing least-privilege access models
+5. **Documentation** - Professional security lab writeup and threat analysis
+
+---
+
+## What This Project Demonstrates
+
+- Hands-on experience building and securing a real AD environment
+- Deep security knowledge - both offensive and defensive perspectives
+- Professional security analysis and documentation
+- Linux system administration and command-line proficiency
+- Problem-solving and troubleshooting (especially on Apple Silicon constraints)
+- Security best practices and enterprise controls
+
+---
+
+## Resources & References
+
+- MITRE ATT&CK Framework - Active Directory Attacks
+- Microsoft Security Best Practices
+- NIST Cybersecurity Framework
+- Kerberos Security Documentation
+
+---
+
+## License
 
 This project is open source and available under the MIT License.
-
----
-
-## About the Author
-
-Cybersecurity enthusiast building hands-on labs to develop real-world security skills. This project demonstrates practical implementation of AD security hardening and threat detection.
-
-**Skills:**
-- Active Directory Administration
-- Linux System Administration
-- Python/Bash Scripting
-- Security Hardening & Auditing
-- Threat Detection & Response
-
----
-
-## Contact
-
-- **GitHub**: [https://github.com/banjworst]
-- **LinkedIn**: [https://linkedin.com/in/sutherlandcs]
-- **Email**: [sanjayarmani@gmail.com]
 
 ---
 
