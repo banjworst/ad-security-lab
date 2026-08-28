@@ -2,15 +2,15 @@
 
 ## Project Overview
 
-A hands-on cybersecurity lab demonstrating **Active Directory security hardening, attack simulation, and threat detection** built on a home lab environment. This project combines offensive and defensive security practices to showcase real-world AD security challenges and mitigations.
+A hands-on cybersecurity lab building and hardening an Active Directory environment on a home lab setup. The domain, security policies, and access controls are built and verified. Attack simulations (Kerberoasting, golden ticket, and others) are documented as a threat model but have not yet been executed against the lab — see Status below.
 
 **Key Skills Demonstrated:**
 - Active Directory administration and security hardening
 - Security policy enforcement (password policies, account lockout)
 - Privilege access management and group-based access control
-- Attack simulation (Brute Force, Privilege Escalation, Kerberoasting, Golden Tickets)
-- Threat detection and incident response
+- Threat modeling for common AD attack vectors (Brute Force, Privilege Escalation, Kerberoasting, Golden Tickets)
 - Linux system administration
+- Technical documentation
 
 ---
 
@@ -69,53 +69,47 @@ Domain users for testing:
 
 ---
 
-## Attack Simulations & Mitigations
+## Attack Scenarios (Threat Model — Not Yet Executed)
 
-### Attack 1: Brute Force Attack
+The scenarios below are documented as a threat model with planned detection and mitigation approaches. They have **not yet been run against the lab environment** — no captured tool output, cracked hashes, or forged tickets exist yet. See ATTACK_SCENARIOS.md for the full write-up. Execution is the next phase of this project.
+
+### Scenario 1: Brute Force Attack
 
 **Scenario:** Attacker attempts repeated failed logins
 
-**Mitigation:** Account lockout after 5 failed attempts, 30-minute lockout period
+**Planned mitigation:** Account lockout after 5 failed attempts, 30-minute lockout period
 
-**Detection:** Event ID 4740 (Account locked out)
+**Planned detection:** Event ID 4740 (Account locked out)
 
-**Result:** Attack stopped within seconds, suspicious activity logged
-
-### Attack 2: Privilege Escalation
+### Scenario 2: Privilege Escalation
 
 **Scenario:** Non-privileged user attempts to execute admin commands
 
-**Mitigation:** Group-based access control, least privilege enforcement
+**Planned mitigation:** Group-based access control, least privilege enforcement
 
-**Detection:** Event ID 4672 (Privilege assignment), failed command attempts logged
+**Planned detection:** Event ID 4672 (Privilege assignment), failed command attempts logged
 
-**Result:** Access denied, escalation attempt documented
+### Scenario 3: Kerberoasting (Credential Dumping)
 
-### Attack 3: Kerberoasting (Credential Dumping)
+**Scenario:** Attacker requests TGS tickets for service accounts and attempts to crack them offline
 
-**Scenario:** Attacker requests TGS tickets for service accounts
+**Planned mitigation:** Strong passwords (12+ chars) for service accounts
 
-**Mitigation:** Strong passwords (12+ chars) for service accounts
+**Planned detection:** Event ID 4769 (Kerberos ticket requested), unusual ticket request patterns
 
-**Detection:** Event ID 4769 (Kerberos ticket requested), unusual ticket patterns
+### Scenario 4: Golden Ticket Attack
 
-**Result:** Ticket requests monitored, strong passwords prevent successful cracking
+**Scenario:** Attacker forges Kerberos Ticket Granting Tickets using a compromised KRBTGT hash
 
-### Attack 4: Golden Ticket Attack
+**Planned mitigation:** KRBTGT password rotation strategy, TGT monitoring
 
-**Scenario:** Attacker forges Kerberos Ticket Granting Tickets
-
-**Mitigation:** KRBTGT password rotation strategy, TGT monitoring
-
-**Detection:** Unusual TGT creation patterns, TGT validity period monitoring
-
-**Result:** Detection rules configured, mitigation documented
+**Planned detection:** Unusual TGT creation patterns, TGT validity period monitoring
 
 ---
 
 ## Lab Results & Findings
 
-### Verified Security Controls
+### Verified Security Controls (Environment)
 
 | Control | Status | Impact |
 |---------|--------|--------|
@@ -126,12 +120,7 @@ Domain users for testing:
 | Password Expiration | 42 days | Forces regular changes |
 | DNS Resolution | Functional | Domain operations enabled |
 
-### Security Posture
-
-- **Account Security**: Strong (12+ char minimum, history enforcement, lockout)
-- **Access Control**: Strong (role-based groups, least privilege)
-- **Monitoring**: Enabled (audit logging configured)
-- **Threat Detection**: Configured (detection rules for each attack vector)
+These controls are configured and verified in the running lab. The attack scenarios above are the planned next phase to validate them under simulated attack conditions.
 
 ---
 
@@ -186,21 +175,22 @@ See **SETUP.md** for detailed step-by-step installation and configuration.
 ## Key Learnings
 
 1. **Active Directory Security** - Real-world hardening practices and enterprise controls
-2. **Attack Vectors** - Understanding common AD attack methodologies
-3. **Threat Detection** - Identifying and monitoring suspicious activity
-4. **Security Architecture** - Designing least-privilege access models
-5. **Documentation** - Professional security lab writeup and threat analysis
+2. **Attack Vectors** - Researching and modeling common AD attack methodologies
+3. **Security Architecture** - Designing least-privilege access models
+4. **Documentation** - Professional security lab writeup and threat analysis
+5. **Problem-solving** - Working around Apple Silicon virtualization constraints
 
 ---
 
 ## What This Project Demonstrates
 
-- Hands-on experience building and securing a real AD environment
-- Deep security knowledge - both offensive and defensive perspectives
+- Hands-on experience building and hardening a real AD environment
+- Threat modeling from both offensive and defensive perspectives
 - Professional security analysis and documentation
 - Linux system administration and command-line proficiency
 - Problem-solving and troubleshooting (especially on Apple Silicon constraints)
-- Security best practices and enterprise controls
+
+**Next step:** execute the documented attack scenarios (starting with Kerberoasting, using Impacket's GetUserSPNs.py) against the lab and capture real output, screenshots, and detection results.
 
 ---
 
@@ -219,5 +209,5 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Last Updated**: March 2026  
-**Status**: Complete & Tested
+**Last Updated**: August 2026
+**Status**: Environment built & hardened. Attack simulations documented, execution in progress.
